@@ -60,10 +60,15 @@ const toCurrentWeather = (forecast, location) => {
   const current = forecast.current;
   const details = getWeatherDetails(current.weather_code);
 
+  // Sunset for today (index 0 of daily array) – returned as ISO date-time string
+  const sunsetIso = forecast.daily?.sunset?.[0];
+  const sunsetUnix = sunsetIso ? Math.floor(new Date(sunsetIso).getTime() / 1000) : null;
+
   return {
     name: location.name,
     sys: {
       country: location.country_code,
+      sunset: sunsetUnix,
     },
     main: {
       temp: current.temperature_2m,
@@ -119,7 +124,7 @@ export const getWeather = async (city) => {
       current:
         "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
       daily:
-        "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+        "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset",
       timezone: "auto",
       forecast_days: 7,
     },

@@ -1,134 +1,85 @@
-import { FaTemperatureHigh, FaTint, FaWind } from "react-icons/fa";
+import { FaTemperatureHigh, FaTint, FaWind, FaEye, FaCompressAlt } from "react-icons/fa";
+import { WiHumidity } from "react-icons/wi";
+
+const getWeatherGradient = (description, temp) => {
+  const desc = description.toLowerCase();
+  if (desc.includes("rain") || desc.includes("drizzle")) return "weather-grad--rain";
+  if (desc.includes("thunder")) return "weather-grad--storm";
+  if (desc.includes("snow")) return "weather-grad--snow";
+  if (desc.includes("cloud")) return "weather-grad--cloudy";
+  if (desc.includes("fog") || desc.includes("mist")) return "weather-grad--fog";
+  if (temp > 35) return "weather-grad--hot";
+  if (temp < 15) return "weather-grad--cold";
+  return "weather-grad--clear";
+};
 
 const WeatherCard = ({ weather, darkMode }) => {
+  const gradClass = getWeatherGradient(
+    weather.weather[0].description,
+    weather.main.temp
+  );
+
+  const stats = [
+    {
+      icon: <FaTint />,
+      label: "Humidity",
+      value: `${weather.main.humidity}%`,
+      color: "stat--blue",
+    },
+    {
+      icon: <FaWind />,
+      label: "Wind",
+      value: `${Math.round(weather.wind.speed * 3.6)} km/h`,
+      color: "stat--teal",
+    },
+    {
+      icon: <FaTemperatureHigh />,
+      label: "Feels Like",
+      value: `${Math.round(weather.main.feels_like)}°C`,
+      color: "stat--orange",
+    },
+  ];
+
   return (
-    <div
-      className={`
-  rounded-[28px]
-  h-full
-  p-4
-  sm:p-5
-  transition-all
-  duration-500
-${
-  darkMode
-    ? "bg-gray-800 text-white"
-    : "bg-gray-100 text-black"
-}
-`}
-    >
-      <div className="flex justify-center gap-4">
+    <div className={`weather-card ${gradClass} ${darkMode ? "weather-card--dark" : "weather-card--light"}`}>
+      {/* Animated orbs */}
+      <div className="weather-card__orb weather-card__orb--1" />
+      <div className="weather-card__orb weather-card__orb--2" />
+
+      {/* Icon */}
+      <div className="weather-card__icon-wrap">
         <img
-          src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`}
-          alt=""
-          className="h-24 w-24 object-contain sm:h-28 sm:w-28 lg:h-32 lg:w-32"
+          src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@4x.png`}
+          alt={weather.weather[0].description}
+          className="weather-card__icon"
         />
+        <div className="weather-card__icon-glow" />
       </div>
 
-      <div className="text-center">
-        <h1 className="text-4xl font-bold sm:text-5xl">
-          {Math.round(weather.main.temp)}&deg;C
-        </h1>
-
-        <p
-  className={`
-    text-3xl
-    sm:text-4xl
-    lg:text-5xl
-    font-medium
-    break-words
-  ${
-  darkMode
-    ? "bg-gray-800 text-white"
-    : "bg-gray-100 text-black"
-}
-  `}
->{weather.name}</p>
-
-        <p
-  className={`
-    text-lg
-    mt-1
-   ${
-  darkMode
-    ? "bg-gray-800 text-white"
-    : "bg-gray-100 text-black"
-}
-  `}
->
-          {weather.weather[0].description}
-        </p>
+      {/* Main info */}
+      <div className="weather-card__main">
+        <div className="weather-card__temp">
+          {Math.round(weather.main.temp)}
+          <span className="weather-card__unit">°C</span>
+        </div>
+        <h2 className="weather-card__city">{weather.name}</h2>
+        <p className="weather-card__desc">{weather.weather[0].description}</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 w-full mt-8">
-      <div
-  className={`
-    rounded-2xl
-    p-3
-    sm:p-4
-    flex
-    flex-col
-    items-center
-    text-center
-    min-w-0
-    ${
-      darkMode
-        ? "bg-gray-700 text-white"
-        : "bg-gray-100 text-black"
-    }
-  `}
->
-          <FaTint className="mx-auto text-2xl mb-2" />
-          <p className="text-sm">Humidity</p>
-          <h2 className="font-bold">{weather.main.humidity}%</h2>
-        </div>
-<div
-  className={`
-    rounded-2xl
-    p-3
-    sm:p-4
-    flex
-    flex-col
-    items-center
-    text-center
-    min-w-0
-   ${
-  darkMode
-    ? "bg-gray-800 text-white"
-    : "bg-gray-100 text-black"
-}
-  `}
->
-          <FaWind className="mx-auto text-2xl mb-2" />
-          <p className="text-sm">Wind</p>
-          <h2 className="font-bold">
-            {Math.round(weather.wind.speed * 3.6)} km/h
-          </h2>
-        </div>
+      {/* Divider */}
+      <div className="weather-card__divider" />
 
-       <div
-  className={`
-    rounded-2xl
-    p-3
-    sm:p-4
-    flex
-    flex-col
-    items-center
-    text-center
-    min-w-0
-    ${
-      darkMode
-        ? "bg-gray-700 text-white"
-        : "bg-gray-100 text-black"
-    }
-  `}
->
-          <FaTemperatureHigh className="mx-auto text-2xl mb-2" />
-          <p className="text-sm">Feels</p>
-          <h2 className="text-xl font-semibold sm:text-2xl">
-            {Math.round(weather.main.feels_like)}&deg;C
-          </h2>
-        </div>
+      {/* Stats */}
+      <div className="weather-card__stats">
+        {stats.map((s) => (
+          <div key={s.label} className={`stat-pill ${s.color}`}>
+            <span className="stat-pill__icon">{s.icon}</span>
+            <div className="stat-pill__info">
+              <span className="stat-pill__label">{s.label}</span>
+              <span className="stat-pill__value">{s.value}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

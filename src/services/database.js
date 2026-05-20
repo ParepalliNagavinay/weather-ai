@@ -1,14 +1,10 @@
 import { supabase } from "./supabase";
 
-export const saveFavoriteCity = async (
-  city
-) => {
-  const user =
-    (await supabase.auth.getUser()).data.user;
+export const saveFavoriteCity = async (city) => {
+  const user = (await supabase.auth.getUser()).data.user;
 
   if (!user) {
-    alert("Please login first");
-    return;
+    throw new Error("AUTH_REQUIRED");
   }
 
   const { error } = await supabase
@@ -21,9 +17,9 @@ export const saveFavoriteCity = async (
     ]);
 
   if (error) {
-    console.log(error);
-    alert("Error saving city");
-  } else {
-    alert("City saved successfully");
+    console.error(error);
+    throw error;
   }
+
+  return true;
 };

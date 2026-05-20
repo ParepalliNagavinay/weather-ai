@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { FaMoon, FaSun } from "react-icons/fa";
+import { FaMoon, FaSun, FaCloudSun } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
 const Navbar = ({ darkMode, toggleTheme }) => {
   const [user, setUser] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -17,7 +18,13 @@ const Navbar = ({ darkMode, toggleTheme }) => {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    const handleScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -25,77 +32,61 @@ const Navbar = ({ darkMode, toggleTheme }) => {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center gap-4 mb-2 sm:mb-4 sm:flex-row">
+    <nav className={`navbar ${scrolled ? "navbar--scrolled" : ""}`}>
+      <div className="navbar__inner">
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="navbar__theme-btn"
+          aria-label="Toggle theme"
+        >
+          <span className="navbar__theme-icon">
+            {darkMode ? <FaMoon /> : <FaSun />}
+          </span>
+        </button>
 
-      <button
-        onClick={toggleTheme}
-        className="
-        sm:absolute sm:left-0
-        w-11
-        h-11
-        sm:w-14
-        sm:h-14
-        rounded-full
-        bg-white/20
-        backdrop-blur-xl
-        flex
-        items-center
-        justify-center
-        text-white
-        text-2xl
-        sm:text-3xl
-        "
-      >
-        {darkMode ? <FaMoon /> : <FaSun />}
-      </button>
+        {/* Logo */}
+        <div className="navbar__logo">
+          <span className="navbar__logo-text">Weather</span>
+        </div>
 
-      <h1 className="text-4xl font-bold text-white sm:text-5xl lg:text-6xl">
-        Weather
-      </h1>
-
-      <div className="nav-auth-actions">
-        {user ? (
-          <>
-            <Link
-              to="/profile"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nav-profile-button"
-              title={`Open ${user.email} profile`}
-            >
-              {user.email}
-            </Link>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="nav-auth-link nav-auth-link-secondary"
-            >
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <Link
-              to="/login"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nav-auth-link nav-auth-link-secondary"
-            >
-              Login
-            </Link>
-            <Link
-              to="/signup"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="nav-auth-link nav-auth-link-primary"
-            >
-              Sign up
-            </Link>
-          </>
-        )}
+        {/* Auth actions */}
+        <div className="navbar__actions">
+          {user ? (
+            <>
+              <Link
+                to="/profile"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="navbar__user-pill"
+                title={`Open ${user.email} profile`}
+              >
+                <span className="navbar__user-avatar">
+                  {user.email?.[0]?.toUpperCase()}
+                </span>
+                <span className="navbar__user-email">{user.email}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="navbar__btn navbar__btn--ghost"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" target="_blank" rel="noopener noreferrer" className="navbar__btn navbar__btn--ghost">
+                Login
+              </Link>
+              <Link to="/signup" target="_blank" rel="noopener noreferrer" className="navbar__btn navbar__btn--primary">
+                Sign up
+              </Link>
+            </>
+          )}
+        </div>
       </div>
-
-    </div>
+    </nav>
   );
 };
 

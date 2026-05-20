@@ -3,6 +3,7 @@ import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Travel from "./pages/Travel";
+import Photography from "./pages/Photography";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/signup" element={<Auth key="signup" type="signup" />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/travel" element={<Travel />} />
+        <Route path="/photography" element={<Photography />} />
       </Routes>
     </BrowserRouter>
   );

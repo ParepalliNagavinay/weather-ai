@@ -89,109 +89,121 @@ const Travel = () => {
   const suggestions = buildSuggestions({ temp, feels, humidity, wind, condition });
 
   return (
-    <main
-      className="min-h-screen bg-cover bg-center text-white"
-      style={{ backgroundImage: `url(${bgImage})` }}
-    >
-      <div className="min-h-screen bg-slate-950/88 px-4 py-8 backdrop-blur-md sm:px-8 lg:px-12 lg:py-16">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-          <header className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <Link
-              to="/"
-              className="inline-flex min-h-[3.5rem] w-fit items-center justify-center rounded-full border border-white/25 px-8 text-base sm:text-lg font-bold text-sky-100 transition hover:bg-white/10 hover:border-white/50"
-            >
-              Back to weather
-            </Link>
+    <main className="detail-page detail-page--travel">
+      {/* Background Orbs */}
+      <div className="detail-page__bg-effects">
+        <div className="detail-page__orb detail-page__orb--1" />
+        <div className="detail-page__orb detail-page__orb--2" />
+      </div>
 
-            <div className="grid grid-cols-2 gap-4 text-base sm:text-xl lg:text-2xl font-bold sm:grid-cols-4">
-              <span className="flex items-center justify-center rounded-2xl bg-white/15 px-6 py-4 shadow-md backdrop-blur-sm transition-transform hover:scale-105">{temp}&deg;C</span>
-              <span className="flex items-center justify-center rounded-2xl bg-white/15 px-6 py-4 shadow-md backdrop-blur-sm transition-transform hover:scale-105">Feels {feels}&deg;C</span>
-              <span className="flex items-center justify-center rounded-2xl bg-white/15 px-6 py-4 shadow-md backdrop-blur-sm transition-transform hover:scale-105">Humidity {humidity}%</span>
-              <span className="flex items-center justify-center rounded-2xl bg-white/15 px-6 py-4 shadow-md backdrop-blur-sm transition-transform hover:scale-105">Wind {wind} km/h</span>
+      <div className="detail-page__content">
+        {/* Header */}
+        <header className="detail-page__header">
+          <Link to="/" className="detail-page__back-btn">
+            &larr; Back to weather
+          </Link>
+
+          <div className="detail-page__stats">
+            <div className="detail-page__stat-badge">
+              <FaSun />
+              <span>{temp}&deg;C</span>
             </div>
-          </header>
-
-          <section className="py-6 lg:py-8">
-            <p className="text-sm sm:text-base font-extrabold uppercase tracking-[0.16em] text-emerald-300">
-              Travel suggestions
-            </p>
-            <h1 className="mt-4 max-w-4xl text-5xl font-black leading-tight sm:text-7xl">
-              {city}
-            </h1>
-            <p className="mt-6 max-w-3xl text-lg font-semibold text-slate-200 sm:text-2xl leading-relaxed">
-              Current atmosphere is {condition}. Here is a weather-aware travel plan for
-              comfort, timing, and safer movement around the location.
-            </p>
-          </section>
-
-          <section className="grid gap-6 lg:gap-8 lg:grid-cols-2">
-            <article className="rounded-2xl border border-white/10 bg-white/10 p-6 lg:p-8 shadow-2xl backdrop-blur-sm">
-              <FaRegClock className="text-4xl text-emerald-300" />
-              <h2 className="mt-5 text-2xl lg:text-3xl font-black">Best Travel Timing</h2>
-              <p className="mt-3 text-lg lg:text-xl font-medium leading-relaxed text-slate-100">
-                {suggestions.timing}
-              </p>
-            </article>
-
-            <article className="rounded-2xl border border-white/10 bg-white/10 p-6 lg:p-8 shadow-2xl backdrop-blur-sm">
-              <FaCompass className="text-4xl text-sky-300" />
-              <h2 className="mt-5 text-2xl lg:text-3xl font-black">Getting Around</h2>
-              <p className="mt-3 text-lg lg:text-xl font-medium leading-relaxed text-slate-100">
-                {suggestions.transport}
-              </p>
-            </article>
-          </section>
-
-          <section className="grid gap-6 lg:gap-8 lg:grid-cols-[0.9fr_1.1fr]">
-            <article className="rounded-2xl border border-white/10 bg-white/10 p-6 lg:p-8 shadow-2xl backdrop-blur-sm">
-              <FaUmbrella className="text-4xl text-yellow-300" />
-              <h2 className="mt-5 text-2xl lg:text-3xl font-black">Carry With You</h2>
-              <ul className="mt-5 space-y-4">
-                {suggestions.packing.map((item) => (
-                  <li key={item} className="rounded-xl bg-slate-950/40 px-5 py-4 text-lg font-medium">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </article>
-
-            <article className="rounded-2xl border border-white/10 bg-white/10 p-6 lg:p-8 shadow-2xl backdrop-blur-sm">
-              <FaMapMarkedAlt className="text-4xl text-rose-300" />
-              <h2 className="mt-5 text-2xl lg:text-3xl font-black">Recommended Plans</h2>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                {suggestions.activities.map((activity) => (
-                  <div
-                    key={activity}
-                    className="flex min-h-[5rem] items-center gap-4 rounded-xl bg-slate-950/40 px-5 py-4 text-lg font-bold"
-                  >
-                    <FaMountain className="shrink-0 text-2xl text-emerald-300" />
-                    <span>{activity}</span>
-                  </div>
-                ))}
-              </div>
-            </article>
-          </section>
-
-          <section className="rounded-2xl border border-white/10 bg-white/10 p-6 lg:p-8 shadow-2xl backdrop-blur-sm">
-            <div className="flex items-center gap-4">
-              {condition.toLowerCase().includes("rain") ? (
-                <FaCloudRain className="text-4xl text-sky-300" />
-              ) : wind >= 28 ? (
-                <FaWind className="text-4xl text-sky-300" />
-              ) : (
-                <FaSun className="text-4xl text-yellow-300" />
-              )}
-              <h2 className="text-2xl lg:text-3xl font-black">Weather Notes</h2>
+            <div className="detail-page__stat-badge">
+              <FaSun />
+              <span>Feels {feels}&deg;C</span>
             </div>
-            <ul className="mt-5 grid gap-4 sm:grid-cols-2">
-              {suggestions.alerts.map((alert) => (
-                <li key={alert} className="rounded-xl bg-slate-950/40 px-5 py-4 text-lg font-medium">
-                  {alert}
+            <div className="detail-page__stat-badge">
+              <FaUmbrella />
+              <span>Humidity {humidity}%</span>
+            </div>
+            <div className="detail-page__stat-badge">
+              <FaWind />
+              <span>Wind {wind} km/h</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Hero */}
+        <section className="detail-page__hero">
+          <p className="detail-page__subtitle">Travel Suggestions</p>
+          <h1 className="detail-page__title">{city}</h1>
+          <p className="detail-page__desc">
+            Current atmosphere is {condition}. Here is a weather-aware travel plan for comfort, timing, and safer movement around the location.
+          </p>
+        </section>
+
+        {/* Content Grid */}
+        <div className="detail-page__grid">
+          {/* Card 1: Best Travel Timing */}
+          <article className="detail-page__card">
+            <div className="detail-page__card-header">
+              <FaRegClock className="detail-page__card-icon" />
+              <h2 className="detail-page__card-title">Best Travel Timing</h2>
+            </div>
+            <p className="detail-page__card-text">{suggestions.timing}</p>
+          </article>
+
+          {/* Card 2: Getting Around */}
+          <article className="detail-page__card">
+            <div className="detail-page__card-header">
+              <FaCompass className="detail-page__card-icon" />
+              <h2 className="detail-page__card-title">Getting Around</h2>
+            </div>
+            <p className="detail-page__card-text">{suggestions.transport}</p>
+          </article>
+
+          {/* Card 3: Carry With You */}
+          <article className="detail-page__card">
+            <div className="detail-page__card-header">
+              <FaUmbrella className="detail-page__card-icon" />
+              <h2 className="detail-page__card-title">Carry With You</h2>
+            </div>
+            <ul className="detail-page__list">
+              {suggestions.packing.map((item) => (
+                <li key={item} className="detail-page__list-item">
+                  {item}
                 </li>
               ))}
             </ul>
-          </section>
+          </article>
+
+          {/* Card 4: Recommended Plans */}
+          <article className="detail-page__card">
+            <div className="detail-page__card-header">
+              <FaMapMarkedAlt className="detail-page__card-icon" />
+              <h2 className="detail-page__card-title">Recommended Plans</h2>
+            </div>
+            <div className="detail-page__pills-grid">
+              {suggestions.activities.map((activity) => (
+                <div key={activity} className="detail-page__pill-item">
+                  <FaMountain className="detail-page__pill-icon" />
+                  <span className="detail-page__pill-text">{activity}</span>
+                </div>
+              ))}
+            </div>
+          </article>
         </div>
+
+        {/* Bottom Alert Card */}
+        <section className="detail-page__alert-card">
+          <div className="detail-page__alert-header">
+            {condition.toLowerCase().includes("rain") ? (
+              <FaCloudRain className="detail-page__alert-icon" />
+            ) : wind >= 28 ? (
+              <FaWind className="detail-page__alert-icon" />
+            ) : (
+              <FaSun className="detail-page__alert-icon" />
+            )}
+            <h2 className="detail-page__alert-title">Weather Notes</h2>
+          </div>
+          <div className="detail-page__alert-grid">
+            {suggestions.alerts.map((alert) => (
+              <div key={alert} className="detail-page__alert-item">
+                {alert}
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </main>
   );

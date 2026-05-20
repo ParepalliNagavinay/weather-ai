@@ -1,4 +1,5 @@
-const TravelSuggestion = ({ weather, darkMode, city }) => {
+
+const TravelSuggestion = ({ weather, darkMode, city, user, onAuthRequired }) => {
   const params = new URLSearchParams({
     city: weather.name || city,
     temp: Math.round(weather.main.temp).toString(),
@@ -8,58 +9,22 @@ const TravelSuggestion = ({ weather, darkMode, city }) => {
     condition: weather.weather[0].description,
   });
 
-  const temp = weather.main.temp;
-
-  let suggestion =
-    temp > 35
-      ? "Avoid outdoor travel during afternoon hours."
-      : "Perfect weather for travel and sightseeing.";
-
   const travelUrl = `/travel?${params.toString()}`;
 
+  const handleClick = (e) => {
+    if (!user) {
+      e.preventDefault();
+      onAuthRequired();
+    }
+  };
+
   return (
-<div
-  className={`
-  rounded-2xl
-  p-4
-  text-center
-  transition-all
-  duration-500
-  ${
-    darkMode
-      ? "bg-white/10 text-white"
-      : "bg-black/10 text-gray-900"
-  }
-`}
->
+    <div className={`travel-card ${darkMode ? "travel-card--dark" : "travel-card--light"}`}>
       <a
         href={travelUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={`Open travel suggestions for ${city}. ${suggestion}`}
-        className={`
-          inline-flex
-          min-h-12
-          items-center
-          justify-center
-          rounded-xl
-          px-8
-          py-3
-          text-base
-          font-semibold
-          text-white
-          shadow-lg
-          transition
-          hover:-translate-y-0.5
-          focus:outline-none
-          focus:ring-2
-          focus:ring-offset-2
-          ${
-            darkMode
-              ? "bg-emerald-500 hover:bg-emerald-600 focus:ring-emerald-300 focus:ring-offset-slate-950"
-              : "bg-blue-700 hover:bg-blue-800 focus:ring-blue-300 focus:ring-offset-sky-100"
-          }
-        `}
+        onClick={handleClick}
+        className="travel-card__cta"
+        aria-label={`Open travel suggestions for ${city}`}
       >
         Travel Suggestion
       </a>
