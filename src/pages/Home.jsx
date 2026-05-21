@@ -4,13 +4,24 @@ import Navbar from "../components/Navbar";
 import WeatherCard from "../components/WeatherCard";
 import TravelSuggestion from "../components/TravelSuggestion";
 import PhotographySuggestion from "../components/PhotographySuggestion";
+import ImageWeatherAdvisor from "../components/ImageWeatherAdvisor";
 import { saveFavoriteCity } from "../services/database";
 import SearchBar from "../components/SearchBar";
 import { getWeather } from "../services/weatherApi";
 import { supabase } from "../services/supabase";
 import { sendTemperatureAlert } from "../services/emailService";
 import { FiBookmark } from "react-icons/fi";
-import { FaCheckCircle, FaExclamationCircle } from "react-icons/fa";
+import {
+  FaCamera,
+  FaCheckCircle,
+  FaCloudSun,
+  FaExclamationCircle,
+  FaLeaf,
+  FaMapMarkedAlt,
+  FaSeedling,
+  FaTint,
+  FaWind,
+} from "react-icons/fa";
 
 const DEFAULT_CITY = "Bangalore";
 
@@ -110,6 +121,71 @@ const Home = () => {
     );
   }
 
+  const condition = weather.weather[0].description;
+  const windKmh = Math.round(weather.wind.speed * 3.6);
+  const insightParams = new URLSearchParams({
+    city: weather.name || city,
+    temp: Math.round(weather.main.temp).toString(),
+    feels: Math.round(weather.main.feels_like).toString(),
+    humidity: weather.main.humidity.toString(),
+    wind: windKmh.toString(),
+    condition,
+  });
+
+  const getInsightUrl = (type) => {
+    const params = new URLSearchParams(insightParams);
+    params.set("type", type);
+    return `/insight?${params.toString()}`;
+  };
+
+  const featureCards = [
+    {
+      type: "weather",
+      title: "Weather Lens",
+      label: "Live city scan",
+      icon: <FaCloudSun />,
+      metric: `${Math.round(weather.main.temp)}°C`,
+      text: condition,
+      tone: "#38bdf8",
+    },
+    {
+      type: "image",
+      title: "Image AI",
+      label: "Camera + upload",
+      icon: <FaCamera />,
+      metric: "Scene",
+      text: "Photo-based suggestions",
+      tone: "#a78bfa",
+    },
+    {
+      type: "travel",
+      title: "Travel",
+      label: "Route comfort",
+      icon: <FaMapMarkedAlt />,
+      metric: windKmh > 28 ? "Windy" : "Ready",
+      text: "Plan timing and movement",
+      tone: "#10b981",
+    },
+    {
+      type: "photoshoot",
+      title: "Photoshoot",
+      label: "Light guide",
+      icon: <FaLeaf />,
+      metric: weather.sys?.sunset ? "Golden" : "Light",
+      text: "Portrait and outdoor frames",
+      tone: "#f59e0b",
+    },
+    {
+      type: "farming",
+      title: "Farming",
+      label: "Field advice",
+      icon: <FaSeedling />,
+      metric: `${weather.main.humidity}%`,
+      text: "Crop care from weather",
+      tone: "#34d399",
+    },
+  ];
+
   return (
     <div className={`home ${darkMode ? "home--dark" : "home--light"}`}>
       {/* Animated background */}
@@ -122,7 +198,17 @@ const Home = () => {
 
       {/* Content */}
       <div className="home__content">
-        <Navbar darkMode={darkMode} toggleTheme={toggleTheme} />
+        <Navbar
+          darkMode={darkMode}
+          toggleTheme={toggleTheme}
+          leftAccessory={
+            <ImageWeatherAdvisor
+              weather={weather}
+              city={city}
+              darkMode={darkMode}
+            />
+          }
+        />
 
         {/* Search row */}
         <div className="home__search-row">
@@ -136,6 +222,45 @@ const Home = () => {
             <span>Save City</span>
           </button>
         </div>
+
+        <section className="home-feature-board" aria-label="Weather AI features">
+          <div className="home-feature-board__main">
+            <div className="home-feature-board__copy">
+              <span className="home-feature-board__kicker">Smart weather workspace</span>
+              <h2>{city}</h2>
+              <p>
+                One dashboard for live weather, image-aware guidance, travel planning,
+                photoshoot timing, and farming decisions.
+              </p>
+            </div>
+            <div className="home-feature-board__stats">
+              <span><FaTint /> Humidity {weather.main.humidity}%</span>
+              <span><FaWind /> Wind {windKmh} km/h</span>
+              <span><FaCloudSun /> {condition}</span>
+            </div>
+          </div>
+
+          <div className="home-feature-board__cards">
+            {featureCards.map((feature) => (
+              <a
+                key={feature.title}
+                href={getInsightUrl(feature.type)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="home-feature-card"
+                style={{ "--feature-tone": feature.tone }}
+                aria-label={`Open ${feature.title} insight for ${city}`}
+              >
+                <div className="home-feature-card__icon">{feature.icon}</div>
+                <span className="home-feature-card__label">{feature.label}</span>
+                <h3>{feature.title}</h3>
+                <strong>{feature.metric}</strong>
+                <p>{feature.text}</p>
+                <span className="home-feature-card__cta">Open</span>
+              </a>
+            ))}
+          </div>
+        </section>
 
         {/* Main grid */}
         <div className="home__grid">

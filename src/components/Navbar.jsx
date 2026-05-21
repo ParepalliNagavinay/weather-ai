@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { FaMoon, FaSun, FaCloudSun } from "react-icons/fa";
+import { FaMoon, FaSun } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { supabase } from "../services/supabase";
 
-const Navbar = ({ darkMode, toggleTheme }) => {
+const Navbar = ({ darkMode, toggleTheme, leftAccessory }) => {
   const [user, setUser] = useState(null);
   const [scrolled, setScrolled] = useState(false);
 
@@ -34,16 +34,19 @@ const Navbar = ({ darkMode, toggleTheme }) => {
   return (
     <nav className={`navbar ${scrolled ? "navbar--scrolled" : ""}`}>
       <div className="navbar__inner">
-        {/* Theme toggle */}
-        <button
-          onClick={toggleTheme}
-          className="navbar__theme-btn"
-          aria-label="Toggle theme"
-        >
-          <span className="navbar__theme-icon">
-            {darkMode ? <FaMoon /> : <FaSun />}
-          </span>
-        </button>
+        <div className="navbar__left-actions">
+          {leftAccessory}
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="navbar__theme-btn"
+            aria-label="Toggle theme"
+          >
+            <span className="navbar__theme-icon">
+              {darkMode ? <FaMoon /> : <FaSun />}
+            </span>
+          </button>
+        </div>
 
         {/* Logo */}
         <div className="navbar__logo">
