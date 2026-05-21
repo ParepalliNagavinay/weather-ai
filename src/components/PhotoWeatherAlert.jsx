@@ -65,30 +65,46 @@ const getAlertStages = (sunsetUnix) => {
 
   return [
     {
+      id: "early-prediction",
       step: 1,
       color: "#6366f1",
       title: "Early Prediction",
       when: "2–3 hours before",
       time: fmt(early),
+      alertAt: early,
       desc: "Strong chance of beautiful sunset.",
     },
     {
+      id: "preparation-alert",
       step: 2,
       color: "#10b981",
       title: "Preparation Alert",
       when: "1 hour before",
       time: fmt(prep),
+      alertAt: prep,
       desc: "Golden hour begins in 1 hour. Get ready!",
     },
     {
+      id: "live-alert",
       step: 3,
       color: "#f59e0b",
       title: "Live Alert",
       when: "15 minutes before",
       time: fmt(live),
+      alertAt: live,
       desc: "Perfect lighting window approaching!",
     },
   ];
+};
+
+const stageStatusLabels = {
+  scheduled: "Email scheduled",
+  due: "Sending now",
+  sending: "Sending...",
+  sent: "Email sent",
+  failed: "Email failed",
+  expired: "Expired",
+  "login-required": "Login required",
 };
 
 const modeImages = {
@@ -102,6 +118,7 @@ const modeImages = {
 const PhotoWeatherAlert = ({ condition, humidity, wind, city, sunsetUnix, mode }) => {
   const [selectedStage, setSelectedStage] = useState(null);
   const [alertStatus, setAlertStatus] = useState("idle");
+  const [stageStatuses, setStageStatuses] = useState({});
   const goldenHour = useMemo(() => getGoldenHourWindow(sunsetUnix), [sunsetUnix]);
   const quality = useMemo(
     () => getSunsetQuality(condition, humidity, wind),
@@ -117,10 +134,11 @@ const PhotoWeatherAlert = ({ condition, humidity, wind, city, sunsetUnix, mode }
 
   useEffect(() => {
     if (!sunsetUnix || !conditionMatch.match || !goldenHour) {
+      queueMicrotask(() => setStageStatuses({}));
       return undefined;
     }
 
-    let timeoutId;
+    const timeoutIds = [];
     let cancelled = false;
 
     const schedulePhotographyAlert = async () => {
@@ -129,70 +147,109 @@ const PhotoWeatherAlert = ({ condition, humidity, wind, city, sunsetUnix, mode }
 
       if (error || !data.user?.email) {
         setAlertStatus("login-required");
+        setStageStatuses(
+          stages.reduce((next, stage) => {
+            next[stage.id] = "login-required";
+            return next;
+          }, {})
+        );
         return;
       }
 
       const user = data.user;
-      const alertAt = goldenHour.startDate.getTime() - 60 * 60 * 1000;
       const now = Date.now();
       const todayKey = new Date(sunsetUnix * 1000).toISOString().slice(0, 10);
-      const alertKey = [
-        "photo_alert_sent",
-        user.id,
-        city.toLowerCase(),
-        mode,
-        todayKey,
-        alertAt,
-      ].join("_");
-
-      if (localStorage.getItem(alertKey)) {
-        setAlertStatus("sent");
-        return;
-      }
-
-      const sendAlert = async () => {
-        if (cancelled || localStorage.getItem(alertKey)) return;
-        setAlertStatus("sending");
-        const sent = await sendPhotographyAlert({
-          email: user.email,
-          city,
-          mode,
-          condition,
-          humidity,
-          wind,
-          goldenStart: goldenHour.start,
-          goldenEnd: goldenHour.end,
-          sunsetQuality: quality.score,
-          alertTime: new Date().toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          }),
-        });
-
-        if (sent) {
-          localStorage.setItem(alertKey, "true");
-          setAlertStatus("sent");
-        } else {
-          setAlertStatus("failed");
-        }
-      };
 
       if (now >= goldenHour.endDate.getTime()) {
         setAlertStatus("expired");
+        setStageStatuses(
+          stages.reduce((next, stage) => {
+            next[stage.id] = "expired";
+            return next;
+          }, {})
+        );
         return;
       }
 
-      const delay = Math.max(alertAt - now, 0);
-      setAlertStatus(delay === 0 ? "due" : "scheduled");
-      timeoutId = window.setTimeout(sendAlert, delay);
+      const setStageStatus = (stageId, status) => {
+        setStageStatuses((current) => ({
+          ...current,
+          [stageId]: status,
+        }));
+      };
+
+      let hasPendingStage = false;
+
+      stages.forEach((stage) => {
+        const alertKey = [
+          "photo_alert_sent",
+          user.id,
+          city.toLowerCase(),
+          mode,
+          todayKey,
+          stage.id,
+          stage.alertAt.getTime(),
+        ].join("_");
+
+        if (localStorage.getItem(alertKey)) {
+          setStageStatus(stage.id, "sent");
+          return;
+        }
+
+        const sendStageAlert = async () => {
+          if (cancelled || localStorage.getItem(alertKey)) return;
+
+          setAlertStatus("sending");
+          setStageStatus(stage.id, "sending");
+
+          const sent = await sendPhotographyAlert({
+            email: user.email,
+            city,
+            mode,
+            condition,
+            humidity,
+            wind,
+            goldenStart: goldenHour.start,
+            goldenEnd: goldenHour.end,
+            sunsetQuality: quality.score,
+            stage: {
+              step: stage.step,
+              title: stage.title,
+              when: stage.when,
+              time: stage.time,
+              desc: stage.desc,
+            },
+            alertTime: new Date().toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }),
+          });
+
+          if (sent) {
+            localStorage.setItem(alertKey, "true");
+            setStageStatus(stage.id, "sent");
+            setAlertStatus("scheduled");
+          } else {
+            setStageStatus(stage.id, "failed");
+            setAlertStatus("failed");
+          }
+        };
+
+        const delay = stage.alertAt.getTime() - now;
+        hasPendingStage = true;
+        setStageStatus(stage.id, delay <= 0 ? "due" : "scheduled");
+        timeoutIds.push(window.setTimeout(sendStageAlert, Math.max(delay, 0)));
+      });
+
+      setAlertStatus(hasPendingStage ? "scheduled" : "sent");
     };
 
     schedulePhotographyAlert();
 
     return () => {
       cancelled = true;
-      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
     };
   }, [
     city,
@@ -202,6 +259,7 @@ const PhotoWeatherAlert = ({ condition, humidity, wind, city, sunsetUnix, mode }
     humidity,
     mode,
     quality.score,
+    stages,
     sunsetUnix,
     wind,
   ]);
@@ -215,10 +273,10 @@ const PhotoWeatherAlert = ({ condition, humidity, wind, city, sunsetUnix, mode }
 
   const statusText = {
     idle: "Waiting for sunset timing",
-    scheduled: "Email alert scheduled",
+    scheduled: "Multi-stage email alerts scheduled",
     due: "Sending alert now",
     sending: "Sending alert...",
-    sent: "Email alert sent",
+    sent: "Email alerts already sent",
     failed: "Email alert failed",
     expired: "Today's golden hour has passed",
     "login-required": "Login required for email alert",
@@ -300,8 +358,8 @@ const PhotoWeatherAlert = ({ condition, humidity, wind, city, sunsetUnix, mode }
 
             <div className="photo-alert__bell-row">
               <FaBell className="photo-alert__bell-icon" />
-              <span className="photo-alert__bell-label">Alert Before</span>
-              <span className="photo-alert__bell-value">1 Hour Earlier</span>
+              <span className="photo-alert__bell-label">Alert Emails</span>
+              <span className="photo-alert__bell-value">{stages.length} Stages</span>
             </div>
             {statusText && (
               <p className="photo-alert__status">
@@ -355,6 +413,11 @@ const PhotoWeatherAlert = ({ condition, humidity, wind, city, sunsetUnix, mode }
                 </div>
               </div>
               <p className="photo-alert__stage-desc">{stage.desc}</p>
+              {stageStatuses[stage.id] && (
+                <span className="photo-alert__stage-status">
+                  {stageStatusLabels[stageStatuses[stage.id]]}
+                </span>
+              )}
             </div>
           ))}
         </div>

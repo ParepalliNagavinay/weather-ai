@@ -2287,3 +2287,16 @@ body{
   padding-left: 3.1rem;
   line-height: 1.5;
 }
+
+.photo-alert__stage-status {
+  align-self: flex-start;
+  margin-left: 3.1rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  color: #a7f3d0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}

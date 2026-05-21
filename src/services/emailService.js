@@ -154,6 +154,7 @@ export const sendPhotographyAlert = async ({
   goldenStart,
   goldenEnd,
   sunsetQuality,
+  stage,
   alertTime,
 }) => {
   const serviceId  = import.meta.env.VITE_EMAILJS_SERVICE_ID;
@@ -166,11 +167,32 @@ export const sendPhotographyAlert = async ({
   }
 
   const modeInfo = MODE_TIPS[mode] || MODE_TIPS.single;
+  const stageInfo = stage || {
+    step: 1,
+    title: "Golden Hour Alert",
+    when: "before golden hour",
+    time: alertTime,
+    desc: "Perfect lighting window approaching!",
+  };
+  const stageAdvice = {
+    "Early Prediction":
+      "Review the location, confirm the shoot plan, and keep batteries charging.",
+    "Preparation Alert":
+      "Pack your camera, lens, memory cards, reflector, and weather protection now.",
+    "Live Alert":
+      "Move to your shooting spot and start testing exposure. The best light is close.",
+  }[stageInfo.title] || "Get your camera ready and keep an eye on the light.";
 
   const message = `
 📸 PHOTOGRAPHY GOLDEN HOUR ALERT ${modeInfo.emoji}
 
-Hi! Your photography alert for ${city} is ready.
+Hi! Your ${stageInfo.title} for ${city} is ready.
+
+MULTI-STAGE ALERT
+Stage ${stageInfo.step}: ${stageInfo.title}
+Scheduled Time : ${stageInfo.time}
+Timing         : ${stageInfo.when}
+Message        : ${stageInfo.desc}
 
 🌅 Photoshoot Type : ${modeInfo.label}
 📍 Location        : ${city}
@@ -183,6 +205,9 @@ Hi! Your photography alert for ${city} is ready.
 
 ⭐ Sunset Quality   : ${sunsetQuality} / 100
 🔔 Alert Sent At   : ${alertTime}
+
+WHAT TO DO NOW:
+${stageAdvice}
 
 📷 PRO TIPS FOR YOUR SHOOT:
 ${modeInfo.tips}
@@ -197,9 +222,12 @@ Get your camera ready — the perfect light is approaching!
     to_email:  email,
     user_name: email.split("@")[0],
     city,
+    subject: `${stageInfo.title} - ${city} photography alert`,
     temp:      "-",
     humidity,
     condition,
+    alert_stage: stageInfo.title,
+    alert_time: stageInfo.time,
     message,
   };
 
