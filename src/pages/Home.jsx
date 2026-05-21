@@ -5,6 +5,7 @@ import WeatherCard from "../components/WeatherCard";
 import TravelSuggestion from "../components/TravelSuggestion";
 import PhotographySuggestion from "../components/PhotographySuggestion";
 import ImageWeatherAdvisor from "../components/ImageWeatherAdvisor";
+import WeatherChatbot from "../components/WeatherChatbot";
 import { saveFavoriteCity } from "../services/database";
 import SearchBar from "../components/SearchBar";
 import { getWeather } from "../services/weatherApi";
@@ -282,6 +283,7 @@ const Home = () => {
             />
           </div>
           <div className="home__right">
+            <WeatherChatbot city={city} weather={weather} darkMode={darkMode} />
             <ForecastCard forecast={forecast} darkMode={darkMode} />
           </div>
         </div>
