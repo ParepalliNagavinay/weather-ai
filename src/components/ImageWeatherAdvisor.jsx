@@ -115,7 +115,7 @@ const buildSuggestions = ({ weather, analysis }) => {
   return { travel, photoshoot, farming };
 };
 
-const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
+const ImageWeatherAdvisor = ({ weather, city, darkMode, user, onAuthRequired }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
@@ -173,6 +173,11 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
   };
 
   const startCamera = async () => {
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
+
     setStatus("Starting camera...");
     setCameraReady(false);
     setIsOpen(true);
@@ -222,6 +227,11 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
     });
 
   const openPanel = () => {
+    if (!user) {
+      onAuthRequired?.();
+      return;
+    }
+
     setStatus("");
     setIsOpen(true);
   };
@@ -277,6 +287,12 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
   };
 
   const uploadPhoto = (event) => {
+    if (!user) {
+      onAuthRequired?.();
+      event.target.value = "";
+      return;
+    }
+
     const file = event.target.files?.[0];
     if (!file) return;
     handleImage(URL.createObjectURL(file));

@@ -18,6 +18,7 @@ import {
   FaCloudSun,
   FaExclamationCircle,
   FaLeaf,
+  FaListUl,
   FaMapMarkedAlt,
   FaSeedling,
   FaTint,
@@ -78,7 +79,7 @@ const Home = () => {
 
   const saveCity = async () => {
     try {
-      await saveFavoriteCity(city);
+      await saveFavoriteCity(city, weather?.main?.temp ?? null);
       setSavedToast(true);
       setTimeout(() => setSavedToast(false), 3000);
     } catch (error) {
@@ -88,6 +89,15 @@ const Home = () => {
         console.log(error);
       }
     }
+  };
+
+  const openSavedCities = () => {
+    if (!user) {
+      handleAuthRequired();
+      return;
+    }
+
+    window.open("/favorites", "_blank", "noopener,noreferrer");
   };
 
   useEffect(() => {
@@ -228,6 +238,8 @@ const Home = () => {
               weather={weather}
               city={city}
               darkMode={darkMode}
+              user={user}
+              onAuthRequired={handleAuthRequired}
             />
           }
         />
@@ -242,6 +254,15 @@ const Home = () => {
           >
             <FiBookmark />
             <span>Save City</span>
+          </button>
+          <button
+            type="button"
+            onClick={openSavedCities}
+            className="home__save-btn home__saved-cities-btn"
+            aria-label="View saved cities"
+          >
+            <FaListUl />
+            <span>Saved Cities</span>
           </button>
         </div>
 

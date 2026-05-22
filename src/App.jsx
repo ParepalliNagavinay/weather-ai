@@ -5,6 +5,7 @@ import Profile from "./pages/Profile";
 import Travel from "./pages/Travel";
 import Photography from "./pages/Photography";
 import FeatureInsight from "./pages/FeatureInsight";
+import Favorites from "./pages/Favorites";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/login" element={<Auth key="login" type="login" />} />
         <Route path="/signup" element={<Auth key="signup" type="signup" />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/favorites" element={<Favorites />} />
         <Route path="/travel" element={<Travel />} />
         <Route path="/photography" element={<Photography />} />
         <Route path="/insight" element={<FeatureInsight />} />
