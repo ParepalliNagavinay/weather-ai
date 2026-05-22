@@ -35,6 +35,20 @@ const weatherCodeMap = {
 
 const readJsonBody = (req) =>
   new Promise((resolve, reject) => {
+    if (req.body) {
+      if (typeof req.body === "string") {
+        try {
+          resolve(JSON.parse(req.body));
+        } catch {
+          reject(new Error("Request body must be valid JSON."));
+        }
+        return;
+      }
+
+      resolve(req.body);
+      return;
+    }
+
     let body = "";
 
     req.on("data", (chunk) => {
