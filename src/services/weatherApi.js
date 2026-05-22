@@ -37,6 +37,73 @@ const weatherCodeMap = {
 const getWeatherDetails = (code) =>
   weatherCodeMap[code] ?? { description: "weather unavailable", icon: "03d" };
 
+const normalizePlaceName = (value) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+
+const getEditDistance = (first, second) => {
+  const rows = first.length + 1;
+  const cols = second.length + 1;
+  const distance = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+  for (let row = 0; row < rows; row += 1) distance[row][0] = row;
+  for (let col = 0; col < cols; col += 1) distance[0][col] = col;
+
+  for (let row = 1; row < rows; row += 1) {
+    for (let col = 1; col < cols; col += 1) {
+      const cost = first[row - 1] === second[col - 1] ? 0 : 1;
+      distance[row][col] = Math.min(
+        distance[row - 1][col] + 1,
+        distance[row][col - 1] + 1,
+        distance[row - 1][col - 1] + cost
+      );
+    }
+  }
+
+  return distance[first.length][second.length];
+};
+
+const getNameSimilarity = (first, second) => {
+  if (!first || !second) return 0;
+  const maxLength = Math.max(first.length, second.length);
+  if (maxLength === 0) return 1;
+  return 1 - getEditDistance(first, second) / maxLength;
+};
+
+const isValidLocationMatch = (query, location) => {
+  const queryName = normalizePlaceName(query);
+  const locationParts = [
+    location.name,
+    location.admin1,
+    location.admin2,
+    location.admin3,
+    location.country,
+    location.country_code,
+  ]
+    .filter(Boolean)
+    .map(normalizePlaceName);
+
+  return locationParts.some((part) => {
+    if (!part) return false;
+    if (part === queryName || part.includes(queryName) || queryName.includes(part)) {
+      return true;
+    }
+
+    return queryName.length >= 4 && getNameSimilarity(queryName, part) >= 0.72;
+  });
+};
+
+const createInvalidCityError = (city) => {
+  const error = new Error(`Enter correct city name for "${city}".`);
+  error.code = "INVALID_CITY";
+  return error;
+};
+
 const geocodeCity = async (city) => {
   const { data } = await axios.get(GEOCODING_URL, {
     params: {
@@ -50,7 +117,11 @@ const geocodeCity = async (city) => {
   const location = data.results?.[0];
 
   if (!location) {
-    throw new Error(`No location found for "${city}"`);
+    throw createInvalidCityError(city);
+  }
+
+  if (!isValidLocationMatch(city, location)) {
+    throw createInvalidCityError(city);
   }
 
   return location;

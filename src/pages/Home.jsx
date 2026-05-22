@@ -35,12 +35,18 @@ const Home = () => {
   const [user, setUser] = useState(null);
   const [savedToast, setSavedToast] = useState(false);
   const [showAuthAlert, setShowAuthAlert] = useState(false);
+  const [showInvalidCityAlert, setShowInvalidCityAlert] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const handleAuthRequired = () => {
+  const handleAuthRequired = useCallback(() => {
     setShowAuthAlert(true);
     setTimeout(() => setShowAuthAlert(false), 3000);
-  };
+  }, []);
+
+  const handleInvalidCity = useCallback(() => {
+    setShowInvalidCityAlert(true);
+    setTimeout(() => setShowInvalidCityAlert(false), 3000);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -71,11 +77,15 @@ const Home = () => {
       setForecast(data.forecast.list);
       setCity(data.current.name || nextCity);
     } catch (error) {
-      console.log(error);
+      if (error.code === "INVALID_CITY") {
+        handleInvalidCity();
+      } else {
+        console.log(error);
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [handleInvalidCity]);
 
   const saveCity = async () => {
     try {
@@ -342,6 +352,12 @@ const Home = () => {
         <div className="toast toast--warning">
           <FaExclamationCircle />
           <span>Please login to continue</span>
+        </div>
+      )}
+      {showInvalidCityAlert && (
+        <div className="toast toast--warning">
+          <FaExclamationCircle />
+          <span>Enter correct city name</span>
         </div>
       )}
     </div>

@@ -59,7 +59,6 @@ const SearchBar = ({ city, setCity, fetchWeather }) => {
     const nextCity = inputValue.trim();
     if (!nextCity) return;
     clearTimeout(debounceTimer.current);
-    setCity(nextCity);
     setSuggestions([]);
     setShowDrop(false);
     fetchWeather(nextCity);
