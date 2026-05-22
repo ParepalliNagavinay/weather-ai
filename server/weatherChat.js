@@ -157,6 +157,8 @@ const isGeminiQuotaError = (error) => {
   const message = error.message?.toLowerCase() || "";
 
   return (
+    message.includes("not configured") ||
+    message.includes("api key") ||
     message.includes("quota") ||
     message.includes("billing") ||
     message.includes("rate limit") ||
