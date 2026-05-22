@@ -7,10 +7,17 @@ export const askWeatherChat = async ({ question, location }) => {
     body: JSON.stringify({ question, location }),
   });
 
-  const payload = await response.json();
+  const contentType = response.headers.get("content-type") || "";
+  const payload = contentType.includes("application/json")
+    ? await response.json()
+    : { error: await response.text() };
 
   if (!response.ok) {
-    throw new Error(payload.error || "Unable to answer this weather question.");
+    throw new Error(
+      payload.error && contentType.includes("application/json")
+        ? payload.error
+        : "Weather chatbot service is unavailable."
+    );
   }
 
   return payload;
