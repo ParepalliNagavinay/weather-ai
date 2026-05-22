@@ -191,8 +191,13 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
       setCameraActive(true);
     } catch (error) {
       console.error(error);
-      setStatus("Camera permission was blocked or no camera was found.");
+      setStatus("Camera permission was blocked or no camera was found. Upload an image instead.");
     }
+  };
+
+  const openPanel = () => {
+    setStatus("");
+    setIsOpen(true);
   };
 
   const closePanel = () => {
@@ -241,7 +246,7 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
       <button
         type="button"
         className="image-advisor__fab"
-        onClick={startCamera}
+        onClick={openPanel}
         aria-label="Open camera weather advisor"
         title="Open camera weather advisor"
       >
