@@ -16,12 +16,14 @@ export const sendTemperatureAlert = async (
     return false;
   }
 
-  const recipientEmail = email?.trim().toLowerCase();
+const recipientEmail = email?.trim().toLowerCase();
 
-  if (!recipientEmail) {
-    console.warn("Cannot send alert email without a logged-in user email.");
-    return false;
-  }
+if (!recipientEmail) {
+  console.warn("Cannot send alert email without a logged-in user email.");
+  return false;
+}
+
+const recipientName = recipientEmail.split("@")[0];
   
   let message;
 
@@ -43,10 +45,12 @@ else {
 }
  const templateParams = {
   to_email: recipientEmail,
+  to_name: recipientName,
   email: recipientEmail,
   recipient_email: recipientEmail,
   user_email: recipientEmail,
-  user_name: recipientEmail.split("@")[0],
+  reply_to: recipientEmail,
+  user_name: recipientName,
   city: city,
   temp: temperature.toFixed(1),
   humidity: humidity,
@@ -175,6 +179,15 @@ export const sendPhotographyAlert = async ({
     return false;
   }
 
+  const recipientEmail = email?.trim().toLowerCase();
+
+  if (!recipientEmail) {
+    console.warn("Cannot send photography alert without a logged-in user email.");
+    return false;
+  }
+
+  const recipientName = recipientEmail.split("@")[0];
+
   const modeInfo = MODE_TIPS[mode] || MODE_TIPS.single;
   const stageInfo = stage || {
     step: 1,
@@ -228,8 +241,13 @@ Get your camera ready — the perfect light is approaching!
   `.trim();
 
   const templateParams = {
-    to_email:  email,
-    user_name: email.split("@")[0],
+    to_email:  recipientEmail,
+    to_name: recipientName,
+    email: recipientEmail,
+    recipient_email: recipientEmail,
+    user_email: recipientEmail,
+    reply_to: recipientEmail,
+    user_name: recipientName,
     city,
     subject: `${stageInfo.title} - ${city} photography alert`,
     temp:      "-",
