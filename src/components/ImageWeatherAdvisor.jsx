@@ -118,6 +118,7 @@ const buildSuggestions = ({ weather, analysis }) => {
 const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [imageSrc, setImageSrc] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [status, setStatus] = useState("");
@@ -168,10 +169,12 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setCameraActive(false);
+    setCameraReady(false);
   };
 
   const startCamera = async () => {
-    setStatus("");
+    setStatus("Starting camera...");
+    setCameraReady(false);
     setIsOpen(true);
     if (!navigator.mediaDevices?.getUserMedia) {
       setStatus("Camera access is not available in this browser.");
@@ -184,16 +187,39 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
       setCameraActive(true);
     } catch (error) {
       console.error(error);
       setStatus("Camera permission was blocked or no camera was found. Upload an image instead.");
     }
   };
+
+  const waitForVideoFrame = (video) =>
+    new Promise((resolve, reject) => {
+      if (video.readyState >= 2 && video.videoWidth > 0) {
+        resolve();
+        return;
+      }
+
+      const timeout = window.setTimeout(() => {
+        cleanup();
+        reject(new Error("Camera frame was not ready."));
+      }, 2500);
+
+      const cleanup = () => {
+        window.clearTimeout(timeout);
+        video.removeEventListener("loadeddata", handleReady);
+        video.removeEventListener("canplay", handleReady);
+      };
+
+      const handleReady = () => {
+        cleanup();
+        resolve();
+      };
+
+      video.addEventListener("loadeddata", handleReady, { once: true });
+      video.addEventListener("canplay", handleReady, { once: true });
+    });
 
   const openPanel = () => {
     setStatus("");
@@ -219,16 +245,35 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
     }
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!video || !canvas || !streamRef.current) {
+      setStatus("Camera is not ready yet. Try again in a moment.");
+      return;
+    }
 
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
-    handleImage(canvas.toDataURL("image/jpeg", 0.92));
-    stopCamera();
+    try {
+      setStatus("Capturing image...");
+      await video.play();
+      await waitForVideoFrame(video);
+
+      const settings = streamRef.current.getVideoTracks()[0]?.getSettings?.() || {};
+      canvas.width = video.videoWidth || settings.width || 1280;
+      canvas.height = video.videoHeight || settings.height || 720;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx || canvas.width <= 0 || canvas.height <= 0) {
+        throw new Error("Could not read camera frame.");
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      await handleImage(canvas.toDataURL("image/jpeg", 0.92));
+      stopCamera();
+    } catch (error) {
+      console.error(error);
+      setStatus("Could not capture the camera image. Try Upload Image instead.");
+    }
   };
 
   const uploadPhoto = (event) => {
@@ -238,6 +283,43 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
     stopCamera();
     event.target.value = "";
   };
+
+  useEffect(() => {
+    if (!cameraActive || !streamRef.current || !videoRef.current) return;
+
+    const video = videoRef.current;
+    let cancelled = false;
+
+    const attachStream = async () => {
+      try {
+        video.srcObject = streamRef.current;
+        video.muted = true;
+        video.playsInline = true;
+        video.setAttribute("playsinline", "true");
+        video.setAttribute("webkit-playsinline", "true");
+
+        await video.play();
+        await waitForVideoFrame(video);
+
+        if (!cancelled) {
+          setCameraReady(true);
+          setStatus("");
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          setCameraReady(false);
+          setStatus("Camera opened, but the video preview is not ready yet.");
+        }
+      }
+    };
+
+    attachStream();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cameraActive]);
 
   useEffect(() => () => stopCamera(), []);
 
@@ -279,7 +361,13 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
             <div className="image-advisor__hero-grid">
               <div className="image-advisor__media">
                 {cameraActive ? (
-                  <video ref={videoRef} className="image-advisor__video" playsInline muted />
+                  <video
+                    ref={videoRef}
+                    className="image-advisor__video"
+                    autoPlay
+                    playsInline
+                    muted
+                  />
                 ) : imageSrc ? (
                   <img src={imageSrc} alt="Selected weather scene" className="image-advisor__preview" />
                 ) : (
@@ -331,9 +419,16 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
                 type="button"
                 className="image-advisor__action image-advisor__action--primary"
                 onClick={cameraActive ? capturePhoto : startCamera}
+                disabled={cameraActive && !cameraReady}
               >
                 <FaCamera />
-                <span>{cameraActive ? "Click Photo" : "Open Camera"}</span>
+                <span>
+                  {cameraActive
+                    ? cameraReady
+                      ? "Click Photo"
+                      : "Loading Camera"
+                    : "Open Camera"}
+                </span>
               </button>
               <button
                 type="button"
@@ -348,6 +443,7 @@ const ImageWeatherAdvisor = ({ weather, city, darkMode }) => {
                 className="image-advisor__file"
                 type="file"
                 accept="image/*"
+                capture="environment"
                 onChange={uploadPhoto}
               />
             </div>
