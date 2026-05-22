@@ -1,5 +1,9 @@
 export const askWeatherChat = async ({ question, location }) => {
-  const response = await fetch("/api/weather-chat", {
+  const apiUrl = window.location.hostname.endsWith(".netlify.app")
+    ? "/.netlify/functions/weather-chat"
+    : "/api/weather-chat";
+
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
