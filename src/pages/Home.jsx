@@ -45,6 +45,16 @@ const Home = () => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
     });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const toggleTheme = () => setDarkMode(!darkMode);
@@ -84,11 +94,16 @@ const Home = () => {
     const checkAndSendAlert = async () => {
       if (!user || !weather) return;
       if (weather.main.temp <= 35) return;
-      const alertKey = `weather_alert_sent_${user.id}`;
+
+      const { data, error } = await supabase.auth.getUser();
+      const currentUser = data?.user;
+      if (error || !currentUser?.email) return;
+
+      const alertKey = `weather_alert_sent_${currentUser.id}`;
       if (sessionStorage.getItem(alertKey)) return;
       try {
         const success = await sendTemperatureAlert(
-          user.email,
+          currentUser.email,
           city,
           weather.main.temp,
           weather.main.humidity,
@@ -105,7 +120,13 @@ const Home = () => {
   }, [user, weather, city]);
 
   useEffect(() => {
-    fetchWeather(DEFAULT_CITY);
+    const timeoutId = window.setTimeout(() => {
+      fetchWeather(DEFAULT_CITY);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [fetchWeather]);
 
   if (loading || !weather) {

@@ -15,6 +15,13 @@ export const sendTemperatureAlert = async (
     console.warn("EmailJS configuration is missing. Cannot send alert email.");
     return false;
   }
+
+  const recipientEmail = email?.trim().toLowerCase();
+
+  if (!recipientEmail) {
+    console.warn("Cannot send alert email without a logged-in user email.");
+    return false;
+  }
   
   let message;
 
@@ -35,9 +42,11 @@ else {
     "Weather looks pleasant today. Good time for travel.";
 }
  const templateParams = {
-  
-  to_email: email,
-  user_name: "Vinay",
+  to_email: recipientEmail,
+  email: recipientEmail,
+  recipient_email: recipientEmail,
+  user_email: recipientEmail,
+  user_name: recipientEmail.split("@")[0],
   city: city,
   temp: temperature.toFixed(1),
   humidity: humidity,
