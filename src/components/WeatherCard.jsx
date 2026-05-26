@@ -1,5 +1,4 @@
-import { FaTemperatureHigh, FaTint, FaWind, FaEye, FaCompressAlt } from "react-icons/fa";
-import { WiHumidity } from "react-icons/wi";
+import { FaTemperatureHigh, FaTint, FaWind } from "react-icons/fa";
 
 const getWeatherGradient = (description, temp) => {
   const desc = description.toLowerCase();

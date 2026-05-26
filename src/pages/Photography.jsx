@@ -30,7 +30,7 @@ const buildPhotoSuggestions = ({ temp, feels, humidity, wind, condition, mode })
   const isWindy = wind >= 28;
 
   // General lighting settings based on weather
-  let light = "";
+  let light;
   if (hasRain) {
     light = "Soft, diffused, moody light. Low contrast with rich reflections on wet surfaces. Great for cinematic, reflective portraits.";
   } else if (hasFog) {
@@ -53,7 +53,7 @@ const buildPhotoSuggestions = ({ temp, feels, humidity, wind, condition, mode })
   }
 
   // Recommended Gear based on weather & mode
-  let gear = "";
+  let gear;
   if (hasRain) {
     gear = "Camera rain sleeve, lens hood (to block rain drops), microfiber cloths.";
   } else if (isWindy) {

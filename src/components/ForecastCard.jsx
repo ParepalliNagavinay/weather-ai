@@ -11,11 +11,6 @@ const ForecastCard = ({ forecast, darkMode }) => {
     if (daily.length >= 7) break;
   }
 
-  const getBarWidth = (temp, min = 20, max = 45) => {
-    const pct = Math.min(Math.max(((temp - min) / (max - min)) * 100, 8), 100);
-    return `${pct}%`;
-  };
-
   return (
     <div className={`forecast-card ${darkMode ? "forecast-card--dark" : "forecast-card--light"}`}>
       <div className="forecast-card__header">

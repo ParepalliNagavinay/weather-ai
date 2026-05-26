@@ -9,7 +9,6 @@ import {
   FaUmbrella,
   FaWind,
 } from "react-icons/fa";
-import bgImage from "../assets/nature.jpg";
 
 const getNumberParam = (params, key, fallback) => {
   const value = Number(params.get(key));
