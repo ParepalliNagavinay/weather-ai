@@ -5,6 +5,7 @@ import {
   FaLeaf,
   FaMapMarkedAlt,
   FaSeedling,
+  FaSmog,
   FaTint,
   FaWind,
 } from "react-icons/fa";
@@ -14,7 +15,16 @@ const getNumberParam = (params, key, fallback) => {
   return Number.isFinite(value) ? value : fallback;
 };
 
-const getInsight = ({ type, city, temp, feels, humidity, wind, condition }) => {
+const getAqiAdvice = (city, aqi, label) => {
+  if (!Number.isFinite(aqi) || aqi <= 0) return "AQI readings are unavailable for this city right now.";
+  if (aqi <= 50) return `${city} has clean air right now. Outdoor activity is comfortable for most people.`;
+  if (aqi <= 100) return `${city} has acceptable air, though sensitive users should pace long outdoor activity.`;
+  if (aqi <= 150) return `${city} may affect sensitive groups. Reduce heavy outdoor exertion if you have breathing concerns.`;
+  if (aqi <= 200) return `${city} air is ${label.toLowerCase()}. Keep outdoor time short and avoid busy traffic corridors.`;
+  return `${city} air quality is serious today. Prefer indoor plans and keep windows closed.`;
+};
+
+const getInsight = ({ type, city, temp, feels, humidity, wind, condition, aqi, aqiLabel }) => {
   const atmosphere = condition.toLowerCase();
   const rainy = atmosphere.includes("rain") || atmosphere.includes("drizzle") || atmosphere.includes("storm");
   const cloudy = atmosphere.includes("cloud") || atmosphere.includes("overcast");
@@ -109,6 +119,18 @@ const getInsight = ({ type, city, temp, feels, humidity, wind, condition }) => {
         ["Inspection", "Check leaves, soil moisture, pests, and exposed young plants."],
       ],
     },
+    aqi: {
+      icon: <FaSmog />,
+      title: "AQI",
+      kicker: "Air quality",
+      tone: "#10b981",
+      summary: getAqiAdvice(city, aqi, aqiLabel),
+      cards: [
+        ["AQI Level", Number.isFinite(aqi) && aqi > 0 ? `${aqi} - ${aqiLabel}` : "Live AQI unavailable."],
+        ["Outdoor Plan", aqi > 150 ? "Prefer indoor plans and avoid long exposure." : "Normal outdoor movement is reasonable with personal comfort checks."],
+        ["Health Cue", aqi > 100 ? "Sensitive users should carry medication or a mask if needed." : "Air quality is not a major limiter right now."],
+      ],
+    },
   };
 
   return { ...common, ...(insights[type] || insights.weather) };
@@ -122,8 +144,10 @@ const FeatureInsight = () => {
   const feels = getNumberParam(params, "feels", temp);
   const humidity = getNumberParam(params, "humidity", 60);
   const wind = getNumberParam(params, "wind", 12);
+  const aqi = getNumberParam(params, "aqi", 0);
+  const aqiLabel = params.get("aqiLabel") || "Unavailable";
   const condition = params.get("condition") || "current weather";
-  const insight = getInsight({ type, city, temp, feels, humidity, wind, condition });
+  const insight = getInsight({ type, city, temp, feels, humidity, wind, condition, aqi, aqiLabel });
 
   return (
     <main className="feature-insight">
@@ -145,6 +169,7 @@ const FeatureInsight = () => {
           <span><FaCloudSun /> {city}</span>
           <span><FaTint /> {humidity}% humidity</span>
           <span><FaWind /> {wind} km/h wind</span>
+          {type === "aqi" && <span><FaSmog /> AQI {aqi > 0 ? aqi : "--"}</span>}
           <span>{condition}</span>
         </div>
 

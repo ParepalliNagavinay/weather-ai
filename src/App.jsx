@@ -6,6 +6,8 @@ import Travel from "./pages/Travel";
 import Photography from "./pages/Photography";
 import FeatureInsight from "./pages/FeatureInsight";
 import Favorites from "./pages/Favorites";
+import WeatherComparison from "./pages/WeatherComparison";
+import SavedComparisons from "./pages/SavedComparisons";
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
         <Route path="/signup" element={<Auth key="signup" type="signup" />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/favorites" element={<Favorites />} />
+        <Route path="/comparison" element={<WeatherComparison />} />
+        <Route path="/saved-comparisons" element={<SavedComparisons />} />
         <Route path="/travel" element={<Travel />} />
         <Route path="/photography" element={<Photography />} />
         <Route path="/insight" element={<FeatureInsight />} />

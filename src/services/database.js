@@ -95,3 +95,46 @@ export const getFavoriteCities = async () => {
   const favorites = data?.length ? data : readCachedFavoriteCities(user.id);
   return sortFavoriteCities(favorites);
 };
+
+export const saveWeatherComparison = async (comparison) => {
+  const user = (await supabase.auth.getUser()).data.user;
+
+  if (!user) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  const { error } = await supabase.from("cities_comparison").insert([
+    {
+      user_id: user.id,
+      ...comparison,
+    },
+  ]);
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return true;
+};
+
+export const getWeatherComparisons = async () => {
+  const user = (await supabase.auth.getUser()).data.user;
+
+  if (!user) {
+    throw new Error("AUTH_REQUIRED");
+  }
+
+  const { data, error } = await supabase
+    .from("cities_comparison")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+
+  return data ?? [];
+};

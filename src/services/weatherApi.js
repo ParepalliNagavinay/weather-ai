@@ -1,7 +1,8 @@
 import axios from "axios";
+import { geocodeCity } from "./geocoding";
 
-const GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
+const AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality";
 
 const weatherCodeMap = {
   0: { description: "clear sky", icon: "01d" },
@@ -37,96 +38,6 @@ const weatherCodeMap = {
 const getWeatherDetails = (code) =>
   weatherCodeMap[code] ?? { description: "weather unavailable", icon: "03d" };
 
-const normalizePlaceName = (value) =>
-  value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .replace(/\s+/g, " ");
-
-const getEditDistance = (first, second) => {
-  const rows = first.length + 1;
-  const cols = second.length + 1;
-  const distance = Array.from({ length: rows }, () => Array(cols).fill(0));
-
-  for (let row = 0; row < rows; row += 1) distance[row][0] = row;
-  for (let col = 0; col < cols; col += 1) distance[0][col] = col;
-
-  for (let row = 1; row < rows; row += 1) {
-    for (let col = 1; col < cols; col += 1) {
-      const cost = first[row - 1] === second[col - 1] ? 0 : 1;
-      distance[row][col] = Math.min(
-        distance[row - 1][col] + 1,
-        distance[row][col - 1] + 1,
-        distance[row - 1][col - 1] + cost
-      );
-    }
-  }
-
-  return distance[first.length][second.length];
-};
-
-const getNameSimilarity = (first, second) => {
-  if (!first || !second) return 0;
-  const maxLength = Math.max(first.length, second.length);
-  if (maxLength === 0) return 1;
-  return 1 - getEditDistance(first, second) / maxLength;
-};
-
-const isValidLocationMatch = (query, location) => {
-  const queryName = normalizePlaceName(query);
-  const locationParts = [
-    location.name,
-    location.admin1,
-    location.admin2,
-    location.admin3,
-    location.country,
-    location.country_code,
-  ]
-    .filter(Boolean)
-    .map(normalizePlaceName);
-
-  return locationParts.some((part) => {
-    if (!part) return false;
-    if (part === queryName || part.includes(queryName) || queryName.includes(part)) {
-      return true;
-    }
-
-    return queryName.length >= 4 && getNameSimilarity(queryName, part) >= 0.72;
-  });
-};
-
-const createInvalidCityError = (city) => {
-  const error = new Error(`Enter correct city name for "${city}".`);
-  error.code = "INVALID_CITY";
-  return error;
-};
-
-const geocodeCity = async (city) => {
-  const { data } = await axios.get(GEOCODING_URL, {
-    params: {
-      name: city,
-      count: 1,
-      language: "en",
-      format: "json",
-    },
-  });
-
-  const location = data.results?.[0];
-
-  if (!location) {
-    throw createInvalidCityError(city);
-  }
-
-  if (!isValidLocationMatch(city, location)) {
-    throw createInvalidCityError(city);
-  }
-
-  return location;
-};
-
 const toCurrentWeather = (forecast, location) => {
   const current = forecast.current;
   const details = getWeatherDetails(current.weather_code);
@@ -137,6 +48,10 @@ const toCurrentWeather = (forecast, location) => {
 
   return {
     name: location.name,
+    coord: {
+      lat: location.latitude,
+      lon: location.longitude,
+    },
     sys: {
       country: location.country_code,
       sunset: sunsetUnix,
@@ -185,6 +100,220 @@ const toDailyForecast = (forecast) => ({
   }),
 });
 
+const getAqiStatus = (aqi) => {
+  if (!Number.isFinite(aqi)) return { label: "Unavailable", level: "unknown" };
+  if (aqi <= 50) return { label: "Good", level: "good" };
+  if (aqi <= 100) return { label: "Moderate", level: "moderate" };
+  if (aqi <= 150) return { label: "Unhealthy for Sensitive Groups", level: "sensitive" };
+  if (aqi <= 200) return { label: "Unhealthy", level: "unhealthy" };
+  if (aqi <= 300) return { label: "Very Unhealthy", level: "very-unhealthy" };
+  return { label: "Hazardous", level: "hazardous" };
+};
+
+const getClosestHourlyIndex = (times) => {
+  if (!Array.isArray(times) || times.length === 0) return 0;
+
+  const now = Date.now();
+  return times.reduce((closestIndex, time, index) => {
+    const currentDistance = Math.abs(new Date(time).getTime() - now);
+    const closestDistance = Math.abs(new Date(times[closestIndex]).getTime() - now);
+    return currentDistance < closestDistance ? index : closestIndex;
+  }, 0);
+};
+
+const getAirQuality = async (location) => {
+  try {
+    const { data } = await axios.get(AIR_QUALITY_URL, {
+      params: {
+        latitude: location.latitude,
+        longitude: location.longitude,
+        hourly:
+          "us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone,sulphur_dioxide",
+        timezone: "auto",
+        forecast_days: 1,
+      },
+    });
+
+    const hourly = data.hourly ?? {};
+    const index = getClosestHourlyIndex(hourly.time);
+    const aqi = Math.round(hourly.us_aqi?.[index]);
+    const status = getAqiStatus(aqi);
+
+    return {
+      aqi: Number.isFinite(aqi) ? aqi : null,
+      label: status.label,
+      level: status.level,
+      pollutants: {
+        pm25: hourly.pm2_5?.[index] ?? null,
+        pm10: hourly.pm10?.[index] ?? null,
+        o3: hourly.ozone?.[index] ?? null,
+        no2: hourly.nitrogen_dioxide?.[index] ?? null,
+        so2: hourly.sulphur_dioxide?.[index] ?? null,
+        co: hourly.carbon_monoxide?.[index] ?? null,
+      },
+      updatedAt: hourly.time?.[index] ?? null,
+    };
+  } catch (error) {
+    console.log("Air quality unavailable:", error);
+    return null;
+  }
+};
+
+const getRouteForecast = async (point) => {
+  const { data } = await axios.get(FORECAST_URL, {
+    params: {
+      latitude: point.latitude,
+      longitude: point.longitude,
+      current:
+        "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m",
+      hourly:
+        "temperature_2m,apparent_temperature,precipitation_probability,weather_code,wind_speed_10m",
+      timezone: "auto",
+      forecast_days: 2,
+    },
+  });
+
+  return data;
+};
+
+const getRoutePointStatus = (forecast) => {
+  const current = forecast.current ?? {};
+  const code = current.weather_code;
+  const details = getWeatherDetails(code);
+  const temp = current.temperature_2m;
+  const feels = current.apparent_temperature;
+  const wind = current.wind_speed_10m;
+  const precipitation = current.precipitation ?? 0;
+  const description = details.description.toLowerCase();
+
+  const storm = description.includes("thunder") || code >= 95;
+  const rain = precipitation > 0.2 || description.includes("rain") || description.includes("drizzle");
+  const hot = temp >= 35 || feels >= 38;
+  const windy = wind >= 30;
+
+  return {
+    temp,
+    feels,
+    wind,
+    humidity: current.relative_humidity_2m,
+    precipitation,
+    condition: details.description,
+    hazard: storm ? "storm" : rain ? "rain" : hot ? "hot" : windy ? "wind" : "clear",
+  };
+};
+
+const scoreRouteHour = (forecasts, index) => {
+  return forecasts.reduce((total, forecast) => {
+    const hourly = forecast.hourly ?? {};
+    const code = hourly.weather_code?.[index];
+    const details = getWeatherDetails(code).description.toLowerCase();
+    const temp = hourly.temperature_2m?.[index] ?? 28;
+    const feels = hourly.apparent_temperature?.[index] ?? temp;
+    const rainChance = hourly.precipitation_probability?.[index] ?? 0;
+    const wind = hourly.wind_speed_10m?.[index] ?? 0;
+    const stormPenalty = details.includes("thunder") || code >= 95 ? 55 : 0;
+    const rainPenalty = details.includes("rain") || details.includes("drizzle") ? 25 : 0;
+    const heatPenalty = temp >= 35 || feels >= 38 ? 24 : 0;
+    const windPenalty = wind >= 30 ? 12 : 0;
+
+    return total + rainChance + stormPenalty + rainPenalty + heatPenalty + windPenalty;
+  }, 0);
+};
+
+const getBestRouteTiming = (forecasts) => {
+  const times = forecasts[0]?.hourly?.time ?? [];
+  if (times.length === 0) {
+    return {
+      window: "Next clear window",
+      reason: "Live hourly timing is unavailable, so keep your plan flexible.",
+    };
+  }
+
+  const now = Date.now();
+  const candidates = times
+    .map((time, index) => ({ time, index, date: new Date(time) }))
+    .filter(({ date }) => date.getTime() >= now)
+    .slice(0, 24)
+    .filter((_, index) => index % 3 === 0);
+
+  const best = candidates.reduce((lowest, candidate) => {
+    const score = scoreRouteHour(forecasts, candidate.index);
+    return !lowest || score < lowest.score ? { ...candidate, score } : lowest;
+  }, null);
+
+  if (!best) {
+    return {
+      window: "Next clear window",
+      reason: "Check again closer to departure for a safer timing window.",
+    };
+  }
+
+  const window = best.date.toLocaleString("en-US", {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  return {
+    window,
+    reason:
+      best.score >= 110
+        ? "This is the least risky window, though route weather still needs caution."
+        : best.score >= 55
+          ? "This window has lower route risk than nearby hours."
+          : "This window has the best mix of lower rain, heat, storm, and wind risk.",
+  };
+};
+
+const buildRouteSamples = (origin, destination) => {
+  const steps = 5;
+  return Array.from({ length: steps }, (_, index) => {
+    const ratio = index / (steps - 1);
+    return {
+      latitude: origin.latitude + (destination.latitude - origin.latitude) * ratio,
+      longitude: origin.longitude + (destination.longitude - origin.longitude) * ratio,
+      label:
+        index === 0
+          ? origin.name
+          : index === steps - 1
+            ? destination.name
+            : `Route zone ${index}`,
+      progress: ratio,
+    };
+  });
+};
+
+export const getSmartRouteWeather = async (originCity, destinationCity) => {
+  const [origin, destination] = await Promise.all([
+    geocodeCity(originCity),
+    geocodeCity(destinationCity),
+  ]);
+
+  const samples = buildRouteSamples(origin, destination);
+  const forecasts = await Promise.all(samples.map(getRouteForecast));
+  const zones = samples.map((sample, index) => ({
+    ...sample,
+    ...getRoutePointStatus(forecasts[index]),
+  }));
+  const hazards = zones.reduce(
+    (totals, zone) => ({
+      rain: totals.rain + (zone.hazard === "rain" ? 1 : 0),
+      hot: totals.hot + (zone.hazard === "hot" ? 1 : 0),
+      storm: totals.storm + (zone.hazard === "storm" ? 1 : 0),
+      wind: totals.wind + (zone.hazard === "wind" ? 1 : 0),
+    }),
+    { rain: 0, hot: 0, storm: 0, wind: 0 }
+  );
+
+  return {
+    origin: origin.name,
+    destination: destination.name,
+    zones,
+    hazards,
+    timing: getBestRouteTiming(forecasts),
+  };
+};
+
 export const getWeather = async (city) => {
   const location = await geocodeCity(city);
 
@@ -204,5 +333,6 @@ export const getWeather = async (city) => {
   return {
     current: toCurrentWeather(forecast, location),
     forecast: toDailyForecast(forecast),
+    airQuality: await getAirQuality(location),
   };
 };

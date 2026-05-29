@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import ForecastCard from "../components/ForecastCard";
 import Navbar from "../components/Navbar";
 import WeatherCard from "../components/WeatherCard";
+import AirQualityCard from "../components/AirQualityCard";
+import SafeShelterFinder from "../components/SafeShelterFinder";
+import SmartRouteWeather from "../components/SmartRouteWeather";
 import TravelSuggestion from "../components/TravelSuggestion";
 import PhotographySuggestion from "../components/PhotographySuggestion";
 import ImageWeatherAdvisor from "../components/ImageWeatherAdvisor";
@@ -17,6 +20,7 @@ import {
   FaCheckCircle,
   FaCloudSun,
   FaExclamationCircle,
+  FaExchangeAlt,
   FaLeaf,
   FaListUl,
   FaMapMarkedAlt,
@@ -31,6 +35,7 @@ const Home = () => {
   const [city, setCity] = useState(DEFAULT_CITY);
   const [weather, setWeather] = useState(null);
   const [forecast, setForecast] = useState([]);
+  const [airQuality, setAirQuality] = useState(null);
   const [darkMode, setDarkMode] = useState(true);
   const [user, setUser] = useState(null);
   const [savedToast, setSavedToast] = useState(false);
@@ -75,6 +80,7 @@ const Home = () => {
       const data = await getWeather(nextCity);
       setWeather(data.current);
       setForecast(data.forecast.list);
+      setAirQuality(data.airQuality);
       setCity(data.current.name || nextCity);
     } catch (error) {
       if (error.code === "INVALID_CITY") {
@@ -108,6 +114,16 @@ const Home = () => {
     }
 
     window.open("/favorites", "_blank", "noopener,noreferrer");
+  };
+
+  const openWeatherComparison = () => {
+    if (!user) {
+      handleAuthRequired();
+      return;
+    }
+
+    const params = new URLSearchParams({ city: weather?.name || city });
+    window.open(`/comparison?${params.toString()}`, "_blank", "noopener,noreferrer");
   };
 
   useEffect(() => {
@@ -172,6 +188,8 @@ const Home = () => {
     humidity: weather.main.humidity.toString(),
     wind: windKmh.toString(),
     condition,
+    aqi: (airQuality?.aqi ?? 0).toString(),
+    aqiLabel: airQuality?.label ?? "Unavailable",
   });
 
   const getInsightUrl = (type) => {
@@ -201,11 +219,11 @@ const Home = () => {
     },
     {
       type: "travel",
-      title: "Travel",
-      label: "Route comfort",
+      title: "Smart Route",
+      label: "Route weather",
       icon: <FaMapMarkedAlt />,
       metric: windKmh > 28 ? "Windy" : "Ready",
-      text: "Plan timing and movement",
+      text: "Rain, storm, heat, timing",
       tone: "#10b981",
     },
     {
@@ -274,6 +292,15 @@ const Home = () => {
             <FaListUl />
             <span>Saved Cities</span>
           </button>
+          <button
+            type="button"
+            onClick={openWeatherComparison}
+            className="home__save-btn home__comparison-btn"
+            aria-label="Open weather comparison"
+          >
+            <FaExchangeAlt />
+            <span>Compare</span>
+          </button>
         </div>
 
         <section className="home-feature-board" aria-label="Weather AI features">
@@ -319,6 +346,17 @@ const Home = () => {
         <div className="home__grid">
           <div className="home__left">
             <WeatherCard weather={weather} darkMode={darkMode} />
+            <AirQualityCard
+              airQuality={airQuality}
+              city={city}
+              darkMode={darkMode}
+            />
+            <SafeShelterFinder
+              city={city}
+              weather={weather}
+              darkMode={darkMode}
+            />
+            <SmartRouteWeather darkMode={darkMode} />
             <TravelSuggestion
               weather={weather}
               darkMode={darkMode}
